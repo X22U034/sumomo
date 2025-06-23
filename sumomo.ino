@@ -28,7 +28,7 @@
 // Constants for direction.
 #define LEFT    0
 #define RIGHT   1
-#define CENTER   1
+#define CENTER   2
 
 
 
