@@ -71,8 +71,7 @@ void loop() {
  
   // ボタンが押される(LOW)とロボット停止
   if (digitalRead(START) == 0) {
-    MakerSumo.setMotorSpeed(MOTOR_L, 0);
-    MakerSumo.setMotorSpeed(MOTOR_R, 0);
+    stopMotors();
  
     // 電源を切るまで復帰できないように完全停止する　;は空文で、この行でプロフラムは完全停止
     while (1)
@@ -112,41 +111,67 @@ void strategy1() {
       attack();
     }
   }
+ 
+  //選手セーフティ(プロポ操作で緊急停止)
+  //プロポ受信機の信号を読み取る(0~2000、バインド済みで操作がなければ1500前後になる)
+  unsigned long duration = pulseIn(GPIO2, HIGH, 25000);
+ 
+  if (duration > 1750) {  //緊急停止時
+    while (true) {        //無限ループ
+      stopMotors();       //モーターを止める
+    }
+  }
 }
  
 // 作戦2
 void strategy2() {
   // 左側のセンサーが白線を検知
   if (analogRead(EDGE_L) < EDGE_L_THRESHOLD) {
+    // 少し下がる
+    MakerSumo.setMotorSpeed(MOTOR_L, -100);
+    MakerSumo.setMotorSpeed(MOTOR_R, -100);
+    delay(50);
+ 
     // 90度右に曲がる
-    MakerSumo.setMotorSpeed(MOTOR_L, 255);
-    MakerSumo.setMotorSpeed(MOTOR_R, 0);
+    MakerSumo.setMotorSpeed(MOTOR_L, 0);
+    MakerSumo.setMotorSpeed(MOTOR_R, -255);
     delay(100);
  
-    // ^=はXOR演算子 0→1または1→0に変わり敵探索方向を反転
-    searchDir ^= 1;
   }
   // 右側のセンサーが白線を検知
   else if (analogRead(EDGE_R) < EDGE_R_THRESHOLD) {
-    // 90度左に曲がる
-    MakerSumo.setMotorSpeed(MOTOR_L, 0);
-    MakerSumo.setMotorSpeed(MOTOR_R, 255);
-    delay(100);
+    // 少し下がる
+    MakerSumo.setMotorSpeed(MOTOR_L, -100);
+    MakerSumo.setMotorSpeed(MOTOR_R, -100);
+    delay(50);
  
-    searchDir ^= 1;
+    // 90度左に曲がる
+    MakerSumo.setMotorSpeed(MOTOR_L, -255);
+    MakerSumo.setMotorSpeed(MOTOR_R, 0);
+    delay(100);
   }
   // ノー検知
   else {
-    // 相手が検出されるまで検知し続ける　初期値がHIGH
+    // 相手が検出されるまで検知し続ける、初期値がHIGH
     if ((digitalRead(OPP_FC) == HIGH) && (digitalRead(OPP_FL) == HIGH) && (digitalRead(OPP_FR) == HIGH) && (digitalRead(OPP_L) == HIGH) && (digitalRead(OPP_R) == HIGH)) {
       // Go straight.
-      MakerSumo.setMotorSpeed(MOTOR_L, 250);
-      MakerSumo.setMotorSpeed(MOTOR_R, 255);
+      MakerSumo.setMotorSpeed(MOTOR_L, 100);
+      MakerSumo.setMotorSpeed(MOTOR_R, 100);
       delay(80);
     }
     // 相手を視界に捉えたら攻撃する
     else {
       attack();
+    }
+  }
+ 
+  //選手セーフティ(プロポ操作で緊急停止)
+  //プロポ受信機の信号を読み取る(0~2000、バインド済みで操作がなければ1500前後になる)
+  unsigned long duration = pulseIn(GPIO2, HIGH, 25000);
+ 
+  if (duration > 1750) {  //緊急停止時
+    while (true) {        //無限ループ
+      stopMotors();       //モーターを止める
     }
   }
 }
@@ -159,7 +184,7 @@ void strategy2() {
   *******************************************************************************/
 void startRoutine1() {
   // 開始遅延　1000ミリ秒＝1秒
-  delay(1000);
+  delay(5000);
  
   // 45度右に曲がる
   MakerSumo.setMotorSpeed(MOTOR_L, 255);
@@ -182,6 +207,7 @@ void startRoutine1() {
     // タイムアウト(0.1秒)後に相手が見つからない場合終了する
     // startTimestampー現在時刻(millis)からこのループが始まってからの経過時間を計算
     if (millis() - startTimestamp > 100) {
+      stopMotors();
       break;
     }
   }
@@ -189,7 +215,7 @@ void startRoutine1() {
  
 void startRoutine2() {
   // 開始遅延　1000ミリ秒＝1秒
-  delay(1000);
+  delay(5000);
  
   // 45度左に曲がる
   MakerSumo.setMotorSpeed(MOTOR_L, 0);
@@ -212,6 +238,7 @@ void startRoutine2() {
     // タイムアウト(0.1秒)後に相手が見つからない場合終了する
     // startTimestampー現在時刻(millis)からこのループが始まってからの経過時間を計算
     if (millis() - startTimestamp > 100) {
+      stopMotors();
       break;
     }
   }
@@ -304,8 +331,14 @@ void backoff(int dir) {
   delay(500);
  
   // Stop the motors.
+  stopMotors();
+}
+ 
+/*******************************************************************************
+  * Stop　motors
+  *******************************************************************************/
+void stopMotors() {
   MakerSumo.setMotorSpeed(MOTOR_L, 0);
   MakerSumo.setMotorSpeed(MOTOR_R, 0);
-  delay(50);
 }
  
