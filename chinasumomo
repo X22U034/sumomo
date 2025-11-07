@@ -2,8 +2,8 @@
 const int potPin = A5;  // A5に接続
  
 // エッジセンサー閾値
-#define EDGE_L_THRESHOLD 357
-#define EDGE_R_THRESHOLD 344
+#define EDGE_L_THRESHOLD 150
+#define EDGE_R_THRESHOLD 150
  
 // 方向の定数
 #define LEFT 0
