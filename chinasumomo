@@ -155,8 +155,8 @@ void strategy2() {
     // 相手が検出されるまで検知し続ける、初期値がHIGH
     if ((digitalRead(OPP_FC) == HIGH) && (digitalRead(OPP_FL) == HIGH) && (digitalRead(OPP_FR) == HIGH) && (digitalRead(OPP_L) == HIGH) && (digitalRead(OPP_R) == HIGH)) {
       // Go straight.
-      MakerSumo.setMotorSpeed(MOTOR_L, 100);
-      MakerSumo.setMotorSpeed(MOTOR_R, 100);
+      MakerSumo.setMotorSpeed(MOTOR_L, 70);
+      MakerSumo.setMotorSpeed(MOTOR_R, 70);
       delay(80);
     }
     // 相手を視界に捉えたら攻撃する
@@ -304,25 +304,36 @@ void attack1() {
     delay(300);
   }
 }
-
+ 
 void attack2() {
   // Opponent in front center.
   // Go straight in full speed.
   if (digitalRead(OPP_FC) == LOW) {
-    MakerSumo.setMotorSpeed(MOTOR_L, 255);
-    MakerSumo.setMotorSpeed(MOTOR_R, -255);
-    delay(40);
+    if (digitalRead(OPP_FL) == LOW) {
+      MakerSumo.setMotorSpeed(MOTOR_L, 255);
+      MakerSumo.setMotorSpeed(MOTOR_R, 0);
+      delay(300);
  
-    MakerSumo.setMotorSpeed(MOTOR_L, 255);
-    MakerSumo.setMotorSpeed(MOTOR_R, 255);
-    delay(80);
-
-    MakerSumo.setMotorSpeed(MOTOR_L, -255);
-    MakerSumo.setMotorSpeed(MOTOR_R, 255);
-    delay(150);
+      MakerSumo.setMotorSpeed(MOTOR_L, 50);
+      MakerSumo.setMotorSpeed(MOTOR_R, 255);
+      delay(300);
  
-    MakerSumo.setMotorSpeed(MOTOR_L, 255);
-    MakerSumo.setMotorSpeed(MOTOR_R, 255);
+      MakerSumo.setMotorSpeed(MOTOR_L, 255);
+      MakerSumo.setMotorSpeed(MOTOR_R, 255);
+    }
+   
+    else if (digitalRead(OPP_FR) == LOW) {
+      MakerSumo.setMotorSpeed(MOTOR_L, 0);
+      MakerSumo.setMotorSpeed(MOTOR_R, 255);
+      delay(300);
+ 
+      MakerSumo.setMotorSpeed(MOTOR_L, 255);
+      MakerSumo.setMotorSpeed(MOTOR_R, 50);
+      delay(300);
+ 
+      MakerSumo.setMotorSpeed(MOTOR_L, 255);
+      MakerSumo.setMotorSpeed(MOTOR_R, 255);
+    }
   }
  
   // Opponent in front left.
@@ -392,4 +403,3 @@ void stopMotors() {
   MakerSumo.setMotorSpeed(MOTOR_L, 0);
   MakerSumo.setMotorSpeed(MOTOR_R, 0);
 }
- 
