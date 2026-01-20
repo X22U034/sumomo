@@ -1,0 +1,207 @@
+/*ライブラリ読み込み*/
+#include "CytronMakerSumo.h"
+
+/*定数定義*/
+//エッジセンサー閾値
+const int EDGE_L_THRESHOLD = 150;
+const int EDGE_R_THRESHOLD = 155;
+//方向の定数 
+const int LEFT = 0;
+const int RIGHT = 1;
+const int CENTER = 2;
+
+//スピード上限
+const int maxSpeed = 180;
+//プロポのパルス信号の定義
+const int release = 1100; //セーフティ解除用の閾値。プロポを奥に押し込むことこの閾値を下回る値が返ってくる
+const int pulsetimeout = 900;//タイムアウト時に帰ってくる0が原因で勝手に解除されちゃうのでこれを防ぐため閾値
+const int lock = 1750;    //緊急停止時の閾値。プロポを手前に引くとこの閾値を上回る値が返ってくる
+//作戦閾値
+/*これは作戦が増えるたびに更新してください
+  閾値はデバッグ用コードから設定してね
+  定数名は別に何でもいいけどわかりやすいよう空気読んでね
+*/
+const int strvalue1 = 600;//この閾値以下だと作戦１になる
+
+/*変数定義*/
+//探索方向　初期値
+int setchDir = LEFT;//マシンの動き方に使う
+//作戦識別用の変数
+int potValue = 0;
+//作戦番号
+int str= 0;
+//作戦１用現在のスピード
+int speed_R = 0;
+int speed_L = 0;
+//電源入れたときになる音楽(マリオのあれ)
+int melodyPitch[] = { NOTE_E5, NOTE_E5, 0, NOTE_E5, 0, NOTE_C5, NOTE_E5, 0, NOTE_G5 }; //鳴らす音階
+int melodyDuration[] = { 10, 10, 10, 10, 10, 10, 10, 10, 10 };  // 1それぞれ鳴らす時間
+//セーフティ解除時を知らせる音
+int seftymelodyPitch[] = {NOTE_E5,NOTE_E5};
+int seftymelodyDuration[] = { 10, 10};
+//緊急停止を知らせる音
+int stopmelodyPitch[] = {NOTE_B4,NOTE_B4};
+int stopmelodyDuration[] = {10,10};
+//startRoutineを動かすために使う　マシンが動いてるかどうかを表してまし
+bool started = false;
+
+
+//電源入れて最初に動くプログラム
+void setup() {
+  //いろいろと起動させる
+  Serial.begin(9600);//デバッグ用モニター起動
+  MakerSumo.begin();//MakerSumoライブラリ起動
+  
+  //起動音を鳴らす(ライブラリ使用)
+  MakerSumo.playMelody(melodyPitch,melodyDuration,9);
+  
+  //セーフティロック機能
+  //このセーフティ解除しないとスタート信号受け取っても動かないよ
+  while(true){
+    //変数cheakにGPIO2(プロポ受信機)からの信号を記録
+    int cheak = pulseIn(GPIO2,HIGH,25000);
+    if(cheak < release && cheak > pulsetimeout){//セーフティ解除(プロポを押し込む)したとき
+      MakerSumo.playMelody(seftymelodyPitch,seftymelodyDuration,2);//解除を知らせる音
+      break;//ループ脱出
+    } 
+  }
+  // ユーザーLEDをオンにする
+  digitalWrite(LED, HIGH);//これいる？笑
+
+  //戦術選択
+  if (potValue < strvalue1 ) {//戦術1
+    str = 1;
+  } else {//戦術2
+    str = 2;
+  }
+
+}
+//メインプログラム　基本これをずっと繰り返してるよ
+void loop() {
+  //スタートアップモジュールの信号を記録する変数
+  //読み取るピン番号は１枚目→GPIO1　2枚目→STARTに設定してください
+  int state = digitalRead(GPIO1);//レディ、ストップは0、ゴーは1になるよ
+  //スタート信号受信時
+  if(state == 1){
+    switch(str){//作戦を読み込む
+      case 1:
+        if(!started){//startRoutineを起動
+          startRoutine1(); 
+          started = true;//動き始めたのでtrue
+        }
+        strategy1();
+      break;
+      case 2:
+        if(!started){//startRoutineを起動
+          startRoutine2(); 
+          started = true;//動き始めたのでtrue
+        }
+        strategy2(); 
+      break;
+    }
+  }else{
+    stopMotors();//モーターを止める
+    delay(200);  // チャタリング防止
+    return;      // STOP時はここでループ抜け
+  }
+  //選手セーフティ(プロポ操作)で緊急停止
+  //プロポ受信機の信号を読み取る(0~2000、バインド済みで操作がなければ1500前後になる)
+  unsigned long duration = pulseIn(GPIO2, HIGH, 25000); 
+  
+  if(duration > 1750){//緊急停止時
+    while(true){//無限ループ
+      stopMotors();//モーターを止める
+    }
+  }
+}
+
+void startRoutine1(){
+
+}
+void strategy1(){
+
+}
+void startRoutine2(){
+
+}
+void strategy2(){
+
+}
+//作戦１攻撃
+void attack1(){
+  //まず突撃
+  seftySetMoterSpeed(MOTOR_L, maxSpeed);
+  seftySetMoterSpeed(MOTOR_R, maxSpeed);
+  delay(3000);//基盤の限界を考えて３秒で突撃終了
+  for(int i = maxSpeed; i > 0; i-20){//急なモーターの後転を防ぐため少しずつスピードを落とす
+    seftySetMoterSpeed(MOTOR_L, i);
+    seftySetMoterSpeed(MOTOR_R, i);
+    delay(20);
+  }
+  stopMotors();//安全のため一回止める
+  //よける
+  seftySetMoterSpeed(MOTOR_L, -100);
+  seftySetMoterSpeed(MOTOR_R, 100);
+  delay(200);
+  /*メモ*/
+  //攻撃を仕掛ける場所によっては土俵落ちしてしまう可能性ありかも
+}
+//作戦１バック
+void backoff(int dir){
+  // 少しバックさせる
+
+  if(speed_L == speed_R){
+    for(int i = speed_L; i > 0; i -= 20){
+      seftySetMoterSpeed(MOTOR_R,i);
+      seftySetMoterSpeed(MOTOR_L,i);
+      delay(20);
+    }
+  }elseif(speed_L > speed_R){
+    for(Stop)
+  }
+
+
+
+
+
+  MakerSumo.setMotorSpeed(MOTOR_L, -100);
+  MakerSumo.setMotorSpeed(MOTOR_R, -100);
+  delay(100);
+ 
+  // Rotate..
+ 
+  if (dir == LEFT) {
+    // Rotate left backward.
+    MakerSumo.setMotorSpeed(MOTOR_L, -70);
+    MakerSumo.setMotorSpeed(MOTOR_R, 70);
+  } else if (dir == RIGHT) {
+    // Rotate right backward.
+    MakerSumo.setMotorSpeed(MOTOR_L, 70);
+    MakerSumo.setMotorSpeed(MOTOR_R, -70);
+  }
+  delay(220);
+ 
+  // Stop the motors.
+  stopMotors();
+}
+
+//モータースピード設定 基盤炎上対策として最大出力を180にする
+void seftySetMoterSpeed(int LR,int speed){//左右を判断する変数LRにはMOTOR_L,MOTOR_Rを入れて
+  if(speed > maxSpeed){//もしも180を超えるスピードを設定されても
+    speed = maxSpeed;  //強制的に180にする
+  }
+  MakerSumo.setMotorSpeed(LR,speed);//モーターを回す
+  //現在のスピードを記録
+  if(LR == MOTOR_R){
+    speed_R = speed;
+  }else{
+    speed_L = speed;
+  }
+}
+//停止
+ void stopMotors() {
+  MakerSumo.setMotorSpeed(MOTOR_L, 0);
+  MakerSumo.setMotorSpeed(MOTOR_R, 0);
+  delay(20);
+}
+
